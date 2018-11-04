@@ -1,6 +1,14 @@
 import tensorflow as tf
 
 
+
+'''
+Input Layer --> |Convolutional   Layer 1|  --> |Convolutional    Layer 2| --> |Convolutional     Layer 3|
+                |Filter      Max pooling|      |Filter       Max pooling|     |Filter        Max pooling|
+110 * 110       |10 * 10     3 * 3      |      |5 * 5        3 * 3      |     |
+
+'''
+
 # Constants
 learning_rate = 0.0001
 epochs = 10
@@ -70,6 +78,7 @@ def build_final_layer(input_data, num_input_channels, input_shape):
 def build_cnn():
     x_shaped, y = build_input(110, 110)
     layer1 = build_convolutional_layer(x_shaped, 1, 32, [10, 10], [3, 3], 'Layer1')
-    layer2 = build_convolutional_layer(layer1, 32, 64, [5, 5], [2, 2], 'Layer2')
+    layer2 = build_convolutional_layer(layer1, 32, 64, [5, 5], [3, 3], 'Layer2')
 
     output = build_final_layer(layer2, 64, [])
+
