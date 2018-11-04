@@ -107,6 +107,8 @@ def build_cnn():
     correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_predict, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
+    return y_predict, cross_entropy, optimiser, accuracy
+
 
 def read_input_label(image_file, label_file):
     image = pd.read_csv(image_file, header=None)
@@ -115,8 +117,12 @@ def read_input_label(image_file, label_file):
     return image, label
 
 
-def next_batch(df_image, df_label, batch_size=batch_size):
-    batch_index = np.random.choice(len(df_image), batch_size, replace=False)
+def next_batch(df_image, df_label, batch_size=batch_size, whole=False):
+    batch_index = 0
+    if not whole:
+        batch_index = np.random.choice(len(df_image), batch_size, replace=False)
+    else:
+        batch_index = np.arange(len(df_image))
 
     batch_x = df_image.loc[batch_index].values()
     batch_y = df_label.loc[batch_index].values()
@@ -126,33 +132,45 @@ def next_batch(df_image, df_label, batch_size=batch_size):
 
 
 def run():
-    # setup the initialisation operator
+    # Setup the initialisation operator
     init_op = tf.global_variables_initializer()
 
+    # Load training and testing data sets
     training_image, training_label = read_input_label('./volcanoesvenus/Volcanoes_train/train_images.csv', './volcanoesvenus/Volcanoes_train/train_labels.csv')
-    texting_image, testing_label = read_input_label('./volcanoesvenus/Volcanoes_train/test_images.csv', './volcanoesvenus/Volcanoes_train/test_labels.csv')
+    testing_image, testing_label = read_input_label('./volcanoesvenus/Volcanoes_train/test_images.csv', './volcanoesvenus/Volcanoes_train/test_labels.csv')
 
-    with tf.Session() as sess:
-        # initialise the variables
+    # Construct model
+    y_predict, cross_entropy, optimiser, accuracy = build_cnn()
+
+    with tf.Session() as session:
         sess.run(init_op)
-        total_batch = int(len(training_label) / batch_size)
-        for epoch in range(epochs):
-            avg_cost = 0
-            for i in range(total_batch):
-                batch_x, batch_y = next_batch(training_image, training_label, batch_size=batch_size)
-                _, c = sess.run([optimiser, cross_entropy], feed_dict={x: batch_x, y: batch_y})
-                avg_cost += c / total_batch
-            
-            if epoch % 10 == 0:
-                print('Epoch trained: {0}. Current average cost: {1}\n'.format(epoch, avg_cost))
-
-        print("\nTraining complete!")
+        train(sess, training_image, training_label, cross_entropy, optimiser)
+        y_ = test(sess, testing_image, testing_label, accuracy, y_predict)
         
 
 
-def test():
+def train(sess, training_image, training_label, cross_entropy, optimiser):
+    total_batch = int(len(training_label) / batch_size)
+    for epoch in range(epochs):
+        avg_cost = 0
+        for i in range(total_batch):
+            batch_x, batch_y = next_batch(training_image, training_label, batch_size=batch_size)
+            _, c = sess.run([optimiser, cross_entropy], feed_dict={x: batch_x, y: batch_y})
+            avg_cost += c / total_batch
+        
+        if epoch % 10 == 0:
+            print('Epoch trained: {0}. Current average cost: {1}\n'.format(epoch, avg_cost))
 
-    test_acc = sess.run(accuracy, feed_dict={x: mnist.test.images, y: mnist.test.labels})
+    print("Training complete!\n")
+
+
+def test(sess, testing_image, testing_label, accuracy, y_predict):
+    test_batch_x, test_batch_y = next_batch(testing_image, testing_label, batch_size=len(testing_image), whole=True)
+    test_acc = sess.run(accuracy, feed_dict={x: test_batch_x, y: test_batch_y})
+    y_ = y_predict.eval()
+    print("Test accuracy: {0}".format(test_acc))
+
+    return y_
 
 
 
