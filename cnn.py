@@ -8,9 +8,9 @@ import sys
 CNN structure:
 
 |Input Layer| --> |       Convolutional Layer 1     |  --> |       Convolutional Layer 2      | --> | Flatten Layer |  --> |Fully Connected 1| --> |output|
-|           |     |Filter * 4    ReLU    Max pooling|      |Filter *  4    ReLu    Max pooling|     | 169 * 4 : 50  |      |     50 : 2      |
-|           |     |10 * 10        --->   3 * 3      |      | 5 *  5        --->    3 * 3      |     |      ReLU     |      |     Softmax     |
-| 110 * 110 |     |           37 * 37 *  4          |      |           13 * 13 *  4           |     |      50       |      |        2        |
+|           |     |Filter * 4    ReLU    Max pooling|      |Filter *  4    ReLu    Max pooling|     | 169 * 4 : 50  |      |     50 : 2      |     |      |
+|           |     |10 * 10        --->   3 * 3      |      | 5 *  5        --->    3 * 3      |     |      ReLU     |      |     Softmax     |     |      |
+| 110 * 110 |     |           37 * 37 *  4          |      |           13 * 13 *  4           |     |      50       |      |        2        |     |      |
 '''
 
 # Constants
@@ -43,6 +43,9 @@ def build_convolutional_layer(input_data, num_input_channels, num_filters, filte
     filter_shape - list of int, len=2, height by width
     pool_shape - list of int, len=2, height by width
     name - string, name of current layer
+
+    Return
+    out_layer - output layer tensor
     '''
     # setup the filter input shape for tf.nn.conv_2d
     conv_filt_shape = [filter_shape[0], filter_shape[1], num_input_channels, num_filters]
@@ -70,6 +73,17 @@ def build_convolutional_layer(input_data, num_input_channels, num_filters, filte
 
 
 def build_final_layer(input_data, num_input_channels, input_shape):
+    '''
+    Arguments
+    input_data - tensor, input layer
+    num_input_channels - int, number of input layer channels
+    input_shape - list of int, len=2, shape of input layer
+
+    Return
+    final_layer1 - the first dense layer
+    final_layer2 - the second dense layer, also the final properbility before normalization
+    y_predict - the softmax probability layer
+    '''
     input_data_reshape = tf.reshape(input_data, [-1, num_input_channels * input_shape[0] * input_shape[1]])
 
     w1 = tf.Variable(tf.truncated_normal([num_input_channels * input_shape[0] * input_shape[1], 50], stddev=0.03), name='final_layer1_W')
@@ -87,6 +101,15 @@ def build_final_layer(input_data, num_input_channels, input_shape):
 
 
 def build_cnn():
+    '''
+    Return
+    x - input images
+    y - input labels
+    y_predict - predict labels
+    cross_entropy - cross entropy as loss function
+    optimiser - optimisation funtion, Adam optimizer
+    confusion_mat - confusion matrix as evaluation of model
+    '''
     # Input layers
     x, x_shaped, y = build_input(110, 110)
     print("X: " + str(x.shape))
@@ -115,6 +138,11 @@ def build_cnn():
 
 
 def read_input_label(image_file, label_file):
+    '''
+    Arguments
+    image_file - string, image filename
+    label_file - string, label filename
+    '''
     image = pd.read_csv(image_file, header=None)
     label = pd.read_csv(label_file)[['Volcano?']]
 
@@ -122,6 +150,19 @@ def read_input_label(image_file, label_file):
 
 
 def next_batch(df_image, df_label, batch_size=batch_size, whole=False):
+    '''
+    Generate random mini batch
+
+    Arguments
+    df_image - dataframe, images
+    df_label - dataframe, labels
+    batch_size - int, size of mini batch, default=30
+    whole - bool, flag indicating select whole set as mini batch
+
+    Return
+    batch_x - sampled images
+    batch_y - sampled labels
+    '''
     batch_index = 0
     if not whole:
         batch_index = np.random.choice(len(df_image), batch_size, replace=False)
@@ -138,6 +179,9 @@ def next_batch(df_image, df_label, batch_size=batch_size, whole=False):
 
 
 def run():
+    '''
+    Entry of running model
+    '''
     # Load training and testing data sets
     try:
         training_image, training_label = read_input_label('./volcanoesvenus/Volcanoes_train/train_images.csv', './volcanoesvenus/Volcanoes_train/train_labels.csv')
@@ -162,6 +206,18 @@ def run():
 
 
 def train(sess, x, y, training_image, training_label, cross_entropy, optimiser):
+    '''
+    Training function
+
+    Arguments
+    sess - Tensorflow session
+    x - input layer
+    y - lable layer
+    training_image - dataframe, training image set
+    training_label - dataframe, training labels
+    cross_entropy - loss function layer
+    optimiser - optimise function layer
+    '''
     total_batch = int(len(training_label) / batch_size) // 2
     #total_batch = 5
     for epoch in range(epochs):
@@ -178,6 +234,18 @@ def train(sess, x, y, training_image, training_label, cross_entropy, optimiser):
 
 
 def test(sess, x, y, testing_image, testing_label, confusion_mat, y_predict):
+    '''
+    Test function
+
+    Arguments
+    sess - Tensorflow session
+    x - input layer
+    y - lable layer
+    testing_image - dataframe, testing image set
+    testing_label - dataframe, testing labels
+    confusion_mat - confusion matrix
+    y_predict - predict labels
+    '''
     test_batch_x, test_batch_y = next_batch(testing_image, testing_label, batch_size=len(testing_image), whole=True)
     test_acc = sess.run(confusion_mat, feed_dict={x: test_batch_x, y: test_batch_y})
     #y_ = y_predict.eval()
