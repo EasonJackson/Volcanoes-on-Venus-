@@ -1,21 +1,22 @@
 import tensorflow as tf
 import pandas as pd
-import numpy as py
+import numpy as np
+import sys
 
 
 '''
 CNN structure:
 
-|Input Layer| --> |       Convolutional Layer 1      |  --> |       Convolutional Layer 2      | --> |       Convolutional Layer 3      | --> | Flatten Layer | --> |Fully Connected 1|  --> |Fully Connected 2| --> |output|
-|           |     |Filter * 16    ReLU    Max pooling|      |Filter * 32    ReLu    Max pooling|     |Filter * 64    ReLU    Max pooling|     |36 * 64 : 1000 |     |    1000 : 50    |      |     50 : 2      |
-|           |     |20 * 20        --->    3 * 3      |      |10 * 10        --->    3 * 3      |     |5 * 5          --->    2 * 2      |     |      ReLU     |     |       ReLU      |      |     Softmax     |
-| 110 * 110 |     |           36 * 36 * 16           |      |           12 * 12 * 32           |     |            6 * 6 * 64            |     |     1000      |     |        50       |      |        2        |
+|Input Layer| --> |       Convolutional Layer 1     |  --> |       Convolutional Layer 2      | --> | Flatten Layer |  --> |Fully Connected 1| --> |output|
+|           |     |Filter * 4    ReLU    Max pooling|      |Filter *  4    ReLu    Max pooling|     | 169 * 4 : 50  |      |     50 : 2      |
+|           |     |10 * 10        --->   3 * 3      |      | 5 *  5        --->    3 * 3      |     |      ReLU     |      |     Softmax     |
+| 110 * 110 |     |           37 * 37 *  4          |      |           13 * 13 *  4           |     |      50       |      |        2        |
 '''
 
 # Constants
-learning_rate = 0.0001
-epochs = 100
-batch_size = 50
+learning_rate = 0.001
+epochs = 10
+batch_size = 30
 
 
 def build_input(rows, cols):
@@ -28,7 +29,7 @@ def build_input(rows, cols):
     # dynamically reshape the input
     x_shaped = tf.reshape(x, [-1, rows, cols, 1])
     # now declare the output data placeholder - Yes or No
-    y = tf.placeholder(tf.float32, [None, 2])
+    y = tf.placeholder(tf.int32, [None, 2])
 
     return x, x_shaped, y
 
@@ -71,48 +72,51 @@ def build_convolutional_layer(input_data, num_input_channels, num_filters, filte
 def build_final_layer(input_data, num_input_channels, input_shape):
     input_data_reshape = tf.reshape(input_data, [-1, num_input_channels * input_shape[0] * input_shape[1]])
 
-    w1 = tf.Variable(tf.truncated_normal([num_input_channels * input_shape[0] * input_shape[1], 1000], stddev=0.03), name='final_layer1_W')
-    b1 = tf.Variable(tf.truncated_normal([1000]), stddev=0.01, name='final_layer1_b')
-    final_layer1 = tf.nn.relu(tf.nn.matmul(input_data_reshape, w1) + b1)
+    w1 = tf.Variable(tf.truncated_normal([num_input_channels * input_shape[0] * input_shape[1], 50], stddev=0.03), name='final_layer1_W')
+    b1 = tf.Variable(tf.truncated_normal([50], stddev=0.01), name='final_layer1_b')
+    final_layer1 = tf.nn.relu(tf.matmul(input_data_reshape, w1) + b1)
 
-    w2 = tf.Variable(tf.truncated_normal([1000, 50], stddev=0.03), name='final_layer2_W')
-    b2 = tf.Variable(tf.truncated_normal([50]), stddev=0.01, name='final_layer2_b')
-    final_layer2 = tf.nn.relu(tf.matmul(final_layer1, W2) + b2)
+    w2 = tf.Variable(tf.truncated_normal([50, 2], stddev=0.03), name='final_layer2_W')
+    b2 = tf.Variable(tf.truncated_normal([2], stddev=0.01), name='final_layer2_b')
+    final_layer2 = tf.nn.relu(tf.matmul(final_layer1, w2) + b2)
+    print(final_layer2.shape)
 
-    w3 = tf.Variable(tf.truncated_normal([50, 2], stddev=0.03), name='final_layer3_W')
-    b3 = tf.Variable(tf.truncated_normal([2]), stddev=0.01, name='final_layer3_b')
-    final_layer3 = tf.matmul(final_layer2, W3) + b3
-    y_predict = tf.softmax(final_layer3)
+    y_predict = tf.nn.softmax(final_layer2)
 
-    return final_layer1, final_layer2, final_layer3, y_predict
+    return final_layer1, final_layer2, y_predict
 
 
 def build_cnn():
     # Input layers
     x, x_shaped, y = build_input(110, 110)
+    print("X: " + str(x.shape))
+    print("X_shaped: " + str(x_shaped.shape))
+    print("Y: " + str(y.shape))
 
     # Convolutional layers
-    conv_layer1 = build_convolutional_layer(x_shaped, 1, 16, [20, 20], [3, 3], 'Conv_Layer1')
-    conv_layer2 = build_convolutional_layer(conv_layer1, 16, 32, [10, 10], [3, 3], 'Conv_Layer2')
-    conv_layer3 = build_convolutional_layer(conv_layer2, 32, 64, [5, 5], [2, 2], 'Conv_Layer3')
+    conv_layer1 = build_convolutional_layer(x_shaped, 1, 4, [10, 10], [3, 3], 'Conv_Layer1')
+    conv_layer2 = build_convolutional_layer(conv_layer1, 4, 4, [5, 5], [3, 3], 'Conv_Layer2')
+    print("Conv Layer1: " + str(conv_layer1.shape))
+    print("Conv Layer2: " + str(conv_layer2.shape))
 
     # Fully connected layers
-    final_layer1, final_layer2, final_layer3, y_predict = build_final_layer(conv_layer3, 64, [6, 6])
+    final_layer1, final_layer2, y_predict = build_final_layer(conv_layer2, 4, [13, 13])
 
     # Loss and optimizer
-    cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=final_layer3, labels=y))
+    cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=final_layer2, labels=y))
     optimiser = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cross_entropy)
 
     # define an accuracy assessment operation
-    correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_predict, 1))
-    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    # correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_predict, 1))
+    # accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    confusion_mat = tf.confusion_matrix(y[:, 1], y_predict[:, 1], num_classes=2, name='Confusion_Matrix')
 
-    return y_predict, cross_entropy, optimiser, accuracy
+    return x, y, y_predict, cross_entropy, optimiser, confusion_mat
 
 
 def read_input_label(image_file, label_file):
     image = pd.read_csv(image_file, header=None)
-    label = pd.read_csv(label_file, header=None).loc[:,0]
+    label = pd.read_csv(label_file)[['Volcano?']]
 
     return image, label
 
@@ -124,33 +128,42 @@ def next_batch(df_image, df_label, batch_size=batch_size, whole=False):
     else:
         batch_index = np.arange(len(df_image))
 
-    batch_x = df_image.loc[batch_index].values()
-    batch_y = df_label.loc[batch_index].values()
+    batch_x = df_image.loc[batch_index].values
+    flag_y = df_label.loc[batch_index].values
+    batch_y = np.zeros((batch_size, 2))
+    batch_y[range(batch_size), flag_y.flatten()] = 1 # Col #0 - no volcano; Col #1 - with volcano
 
     return batch_x, batch_y    
 
 
 
 def run():
-    # Setup the initialisation operator
-    init_op = tf.global_variables_initializer()
-
     # Load training and testing data sets
-    training_image, training_label = read_input_label('./volcanoesvenus/Volcanoes_train/train_images.csv', './volcanoesvenus/Volcanoes_train/train_labels.csv')
-    testing_image, testing_label = read_input_label('./volcanoesvenus/Volcanoes_train/test_images.csv', './volcanoesvenus/Volcanoes_train/test_labels.csv')
+    try:
+        training_image, training_label = read_input_label('./volcanoesvenus/Volcanoes_train/train_images.csv', './volcanoesvenus/Volcanoes_train/train_labels.csv')
+        testing_image, testing_label = read_input_label('./volcanoesvenus/Volcanoes_test/test_images.csv', './volcanoesvenus/Volcanoes_test/test_labels.csv')
+    except Exception:
+        print("Reading training and testing datasets failed. Exit.")
+        return
+
+    print('Finishing reading datasets.')
 
     # Construct model
-    y_predict, cross_entropy, optimiser, accuracy = build_cnn()
+    x, y, y_predict, cross_entropy, optimiser, confusion_mat = build_cnn()
+    print('Finishing build cnn.')
 
-    with tf.Session() as session:
+    # Setup the initialisation operator
+    init_op = tf.global_variables_initializer()
+    with tf.Session() as sess:
         sess.run(init_op)
-        train(sess, training_image, training_label, cross_entropy, optimiser)
-        y_ = test(sess, testing_image, testing_label, accuracy, y_predict)
+        train(sess, x, y, training_image, training_label, cross_entropy, optimiser)
+        test(sess, x, y, testing_image, testing_label, confusion_mat, y_predict)
         
 
 
-def train(sess, training_image, training_label, cross_entropy, optimiser):
-    total_batch = int(len(training_label) / batch_size)
+def train(sess, x, y, training_image, training_label, cross_entropy, optimiser):
+    total_batch = int(len(training_label) / batch_size) // 2
+    #total_batch = 5
     for epoch in range(epochs):
         avg_cost = 0
         for i in range(total_batch):
@@ -164,13 +177,27 @@ def train(sess, training_image, training_label, cross_entropy, optimiser):
     print("Training complete!\n")
 
 
-def test(sess, testing_image, testing_label, accuracy, y_predict):
+def test(sess, x, y, testing_image, testing_label, confusion_mat, y_predict):
     test_batch_x, test_batch_y = next_batch(testing_image, testing_label, batch_size=len(testing_image), whole=True)
-    test_acc = sess.run(accuracy, feed_dict={x: test_batch_x, y: test_batch_y})
-    y_ = y_predict.eval()
-    print("Test accuracy: {0}".format(test_acc))
+    test_acc = sess.run(confusion_mat, feed_dict={x: test_batch_x, y: test_batch_y})
+    #y_ = y_predict.eval()
+    print("Test confusion mat:")
+    print("\t 'Predict No Volcano' \t 'Predict Having Volcano'")
+    print("No Volcano {0} \t {1}".format(test_acc[0, 0], test_acc[0, 1]))
+    print("Having Volcano {0} \t {1}".format(test_acc[1, 0], test_acc[1, 1]))
 
-    return y_
+
+if __name__ == "__main__":
+    debug = False
+    if len(sys.argv) > 1:
+        if sys.argv[1] == '-d':
+            debug = True
+
+    if debug:
+        epoch = 1
+
+    run()
+
 
 
 
