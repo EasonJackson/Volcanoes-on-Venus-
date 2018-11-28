@@ -15,8 +15,8 @@ CNN structure:
 
 # Constants
 learning_rate = 0.0001
-epochs = 10
-batch_size = 10
+epochs = 30
+batch_size = 20
 
 
 def build_input(rows, cols):
@@ -132,7 +132,7 @@ def build_cnn():
     final_layer1, final_layer2, final_layer3, y_predict = build_final_layer(conv_layer2, 16, [28, 28])
 
     # Loss and optimizer
-    class_weights = tf.constant([1.0, 1.1], dtype=tf.float32)
+    class_weights = tf.constant([1.0, 5.0], dtype=tf.float32)
     weights = tf.reduce_sum(class_weights * y, axis=1)
     unweight_loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=final_layer3, labels=y)
     cross_entropy = tf.reduce_mean(tf.math.multiply(unweight_loss, weights))
