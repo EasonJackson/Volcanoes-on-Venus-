@@ -7,10 +7,10 @@ import sys
 '''
 CNN structure:
 
-|Input Layer| --> |       Convolutional Layer 1     |  --> |       Convolutional Layer 2      | --> | Flatten Layer |  --> |Fully Connected 1| --> |output|
-|           |     |Filter * 4    ReLU    Max pooling|      |Filter *  4    ReLu    Max pooling|     | 169 * 4 : 50  |      |     50 : 2      |     |      |
-|           |     |10 * 10        --->   3 * 3      |      | 5 *  5        --->    3 * 3      |     |      ReLU     |      |     Softmax     |     |      |
-| 110 * 110 |     |           37 * 37 *  4          |      |           13 * 13 *  4           |     |      50       |      |        2        |     |      |
+|Input Layer| --> |       Convolutional Layer 1     |  --> |       Convolutional Layer 2      | --> | Flatten Layer        | --> | Flatten Layer |  --> |Fully Connected 1| --> |output|
+|           |     |Filter * 8    ReLU    Max pooling|      |Filter * 16    ReLu    Max pooling|     | 28 * 28 * 16  : 1000 |     |   1000 : 50   |      |     50 : 2      |     |      |
+|           |     |  5 * 5        --->   2 * 2      |      | 5 *  5        --->    2 * 2      |     |         ReLU         |     |      ReLU     |      |     Softmax     |     |      |
+| 110 * 110 |     |           55 * 55 *  8          |      |           28 * 28 * 16           |     |         1000         |     |      50       |      |        2        |     |      |
 '''
 
 # Constants

@@ -1,0 +1,23 @@
+Wed Nov 21 11:35:17 EST 2018
+compute-1-01.local
+/home/ypan/ds504
+2018-11-21 11:35:52.712827: I tensorflow/core/platform/cpu_feature_guard.cc:141] Your CPU supports instructions that this TensorFlow binary was not compiled to use: AVX2 FMA
+Finishing reading datasets.
+X: (?, 12100)
+X_shaped: (?, 110, 110, 1)
+Y: (?, 2)
+Conv Layer1: (?, 55, 55, 8)
+Conv Layer2: (?, 28, 28, 16)
+final_layer1(?, 1000)
+final_layer2(?, 50)
+finale_layer3(?, 2)
+Finishing build cnn.
+Epoch trained: 10. Current average cost: 1.460561596666064
+
+[[ 2 48]
+ [ 0 50]]
+Training complete!
+
+Test confusion mat:
+[[  90 2210]
+ [   0  434]]
